@@ -32,6 +32,8 @@ venv\Scripts\python vendor\epson_print_conf\parse_devices.py -T -c vendor\epson.
 echo [5/5] Building exe...
 venv\Scripts\python -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --name EpsonInkPadReset ^
+    --icon assets\app.ico ^
+    --add-data "assets\app.ico;assets" ^
     --paths vendor\epson_print_conf ^
     --add-data "printers.pickle;." ^
     --add-data "ui;ui" ^

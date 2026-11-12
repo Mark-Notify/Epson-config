@@ -246,6 +246,10 @@ class App(ctk.CTk):
         ctk.set_appearance_mode("system")
         self.title(core.APP_TITLE + (" · โหมดทดสอบ" if core.MOCK else ""))
         self.configure(fg_color=BG)
+        try:
+            self.iconbitmap(str(core.app_dir() / "assets" / "app.ico"))
+        except Exception:
+            pass
         self._fit_to_screen(640, 820)
 
         self.jobs = queue.Queue()

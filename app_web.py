@@ -289,7 +289,9 @@ def run_web():
         min_size=(760, 600), background_color="#0E1220", text_select=False)
     api._window = window
     gui = "edgechromium" if sys.platform == "win32" else None
+    icon = core.app_dir() / "assets" / "app.ico"
     webview.start(gui=gui, debug=os.environ.get("EPSON_RESET_DEBUG") == "1",
+                  icon=str(icon) if icon.is_file() else None,
                   private_mode=False,
                   storage_path=str(core.backup_dir() / ".webview"))
 
