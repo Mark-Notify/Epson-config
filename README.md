@@ -4,6 +4,14 @@
 
 ทดสอบกับเครื่องจริงแล้ว: **Epson L4260** (เฟิร์มแวร์ XJ05Q2) รุ่นอื่นที่อยู่ในฐานข้อมูลของ ReInkPy น่าจะใช้ได้ แต่ยังไม่ได้ทดสอบ
 
+## ดาวน์โหลด
+
+**[⬇ EpsonInkPadReset.exe (v2.0.0)](https://github.com/Mark-Notify/Epson-config/raw/main/release/EpsonInkPadReset.exe)** · Windows 10/11 64-bit · ไม่ต้องลง Python
+
+SHA-256: `4af01d27ab4457594ce6c7d51624f4b3dc18b339f5d8c479c656300bc2e33b8b`
+
+ไฟล์ไม่ได้เซ็นชื่อดิจิทัล ตอนเปิดครั้งแรก Windows อาจขึ้น "Windows protected your PC" ให้กด **More info** แล้ว **Run anyway**
+
 ## วิธีใช้ (ผู้ใช้ทั่วไป)
 
 1. เสียบสาย USB ระหว่างคอมกับเครื่องพิมพ์ แล้วเปิดเครื่องพิมพ์
@@ -56,4 +64,4 @@ venv\Scripts\python epson_reset_gui.py
 - [epson_print_conf](https://github.com/Ircama/epson_print_conf) โดย Ircama, สัญญาอนุญาต EUPL-1.2 ใช้คุยกับเครื่องพิมพ์ผ่าน USB และเขียน EEPROM
 - ข้อมูลรุ่นเครื่องพิมพ์จาก `epson.toml` ของ [ReInkPy](https://codeberg.org/atufi/reinkpy)
 
-repo นี้ไม่ได้รวมซอร์สของสองโปรเจกต์ข้างต้นไว้ `build.bat` โหลดมาตอน build แต่ไฟล์ .exe ที่ build ได้มีโค้ดของ epson_print_conf อยู่ข้างใน ถ้าแจกจ่าย .exe ต้องทำตามเงื่อนไข EUPL-1.2
+repo นี้ไม่ได้รวมซอร์สของสองโปรเจกต์ข้างต้นไว้ `build.bat` โหลดมาตอน build แต่ไฟล์ `release/EpsonInkPadReset.exe` มีโค้ดของ epson_print_conf (EUPL-1.2) อยู่ข้างใน build จาก commit `2dc3bebacf314f22bd6484acdb2a7434c7cc00ad` ซอร์สฉบับเต็มดูได้ที่ https://github.com/Ircama/epson_print_conf/tree/2dc3bebacf314f22bd6484acdb2a7434c7cc00ad
