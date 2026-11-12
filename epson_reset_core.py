@@ -33,7 +33,7 @@ import time
 from pathlib import Path
 
 APP_TITLE = "Epson Ink Pad Reset"
-APP_VERSION = "3.0.0"
+APP_VERSION = "3.0.1"
 
 
 # ---------------------------------------------------------------- paths
