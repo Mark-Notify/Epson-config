@@ -1,0 +1,7 @@
+vendor/
+venv/
+build/
+dist/
+*.spec
+*.pickle
+__pycache__/
