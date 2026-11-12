@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo-256.png" width="112" alt="Epson Ink Pad Reset"></p>
+
 # Epson-config
 
 โปรแกรมหน้าต่างภาษาไทย (ดีไซน์กระจกใส ธีมสว่าง/มืดตาม Windows) สำหรับเช็กสถานะและ **รีเซ็ตตัวนับซับหมึก (waste ink pad counter)** ของเครื่องพิมพ์ Epson ผ่านสาย USB หรือ Wi‑Fi กดใช้ได้เลย ไม่ต้องพิมพ์คำสั่ง
