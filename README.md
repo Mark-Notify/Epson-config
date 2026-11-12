@@ -1,6 +1,11 @@
 <p align="center"><img src="assets/logo-256.png" width="112" alt="Epson Ink Pad Reset"></p>
 
-# Epson-config
+<h1 align="center">Epson Ink Pad Reset</h1>
+
+<p align="center">รีเซ็ตซับหมึกและดูแลเครื่องพิมพ์ Epson · Windows 10/11 · ภาษาไทย<br>
+<sub>repo: Epson-config</sub></p>
+
+<p align="center"><img src="docs/screenshots/home-light.jpg" width="820" alt="หน้าภาพรวม ธีมสว่าง"></p>
 
 โปรแกรมหน้าต่างภาษาไทย (ดีไซน์กระจกใส ธีมสว่าง/มืดตาม Windows) สำหรับเช็กสถานะและ **รีเซ็ตตัวนับซับหมึก (waste ink pad counter)** ของเครื่องพิมพ์ Epson ผ่านสาย USB หรือ Wi‑Fi กดใช้ได้เลย ไม่ต้องพิมพ์คำสั่ง
 
@@ -14,6 +19,16 @@
 | **ประวัติและสำรอง** | ประวัติว่ารีเซ็ตเมื่อไหร่ เครื่องไหน คำแนะนำว่าควรเปลี่ยนแผ่นซับหรือยัง และปุ่ม **กู้คืน** ค่า EEPROM จากไฟล์สำรอง |
 | **รุ่นที่รองรับ** | รายชื่อรุ่นทั้งหมดในฐานข้อมูล พร้อมช่องค้นหา และบอกว่ารุ่นไหนดูสถิติ/ตั้งเวลาปิดได้ |
 | **ตั้งค่า** | ตั้งเกณฑ์แจ้งเตือนหมึกใกล้หมด ตรวจหาอัปเดต และดูรายละเอียดทางเทคนิค |
+
+## หน้าตาโปรแกรม
+
+| ธีมมืด (ตาม Windows) | สถิติเครื่อง |
+|---|---|
+| <img src="docs/screenshots/home-dark.jpg" alt="หน้าภาพรวม ธีมมืด"> | <img src="docs/screenshots/stats-light.jpg" alt="หน้าสถิติเครื่อง"> |
+| **บำรุงรักษา** | |
+| <img src="docs/screenshots/care-light.jpg" alt="หน้าบำรุงรักษา"> | |
+
+<sub>ภาพจากโหมดทดสอบ (เครื่องพิมพ์จำลอง L4260)</sub>
 
 ด้านบนเลือกการเชื่อมต่อได้ **USB** หรือ **Wi‑Fi** (ใส่ IP เองหรือกด **ค้นหา** เพื่อหาเครื่องพิมพ์ในวงแลนอัตโนมัติ)
 
@@ -91,6 +106,14 @@ venv\Scripts\python app_web.py
 set EPSON_RESET_MOCK=1
 venv\Scripts\python app_web.py
 ```
+
+## เทมเพลตหน้าตา (ใช้กับโปรแกรมอื่น)
+
+หน้าตาของโปรแกรมนี้เป็นสไตล์ **Glassmorphism (Liquid Glass) Sidebar Dashboard** เก็บไว้เป็นสกิล Claude ชื่อ **glass-ui** ที่ [`.claude/skills/glass-ui/`](.claude/skills/glass-ui/SKILL.md)
+
+- ไฟล์เทมเพลต (เปิด `index.html` ดูได้เลย): [`.claude/skills/glass-ui/template/`](.claude/skills/glass-ui/template/)
+- วิธีใช้และรายชื่อชิ้นส่วน: [REFERENCE.md](.claude/skills/glass-ui/REFERENCE.md)
+- ใน repo นี้ Claude ใช้สกิลนี้อัตโนมัติเมื่อสั่งทำหน้าจอใหม่โดยไม่ระบุสไตล์ ถ้าจะใช้กับ repo อื่น ก๊อปโฟลเดอร์ `glass-ui` ไปไว้ที่ `.claude/skills/` ของ repo นั้น หรือ `~/.claude/skills/` ในเครื่อง หรืออัปโหลดไฟล์ zip ของโฟลเดอร์นี้ที่ claude.ai → Settings → Capabilities → Skills
 
 ## ออกเวอร์ชันใหม่
 
