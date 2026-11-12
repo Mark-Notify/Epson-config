@@ -71,6 +71,33 @@ class Card(ctk.CTkFrame):
                          border_width=1, border_color=BORDER, **kw)
 
 
+class Circle(ctk.CTkFrame):
+    """Fixed-size round badge: the frame keeps its size, the text sits inside,
+    so a wide glyph or Windows display scaling never stretches it into an oval."""
+
+    def __init__(self, master, size, text="", color=GREY, text_color="#FFFFFF",
+                 text_font=None):
+        super().__init__(master, width=size, height=size, corner_radius=size // 2,
+                         fg_color=color)
+        self.pack_propagate(False)
+        self.grid_propagate(False)
+        self.label = ctk.CTkLabel(self, text=text, fg_color="transparent",
+                                  text_color=text_color, font=text_font,
+                                  width=1, height=1)
+        self.label.place(relx=0.5, rely=0.5, anchor="center")
+
+    def set(self, text=None, color=None, text_color=None):
+        if color is not None:
+            self.configure(fg_color=color)
+        kw = {}
+        if text is not None:
+            kw["text"] = text
+        if text_color is not None:
+            kw["text_color"] = text_color
+        if kw:
+            self.label.configure(**kw)
+
+
 class Pill(ctk.CTkLabel):
     def __init__(self, master, **kw):
         super().__init__(master, text="—", font=font(12, "bold"), corner_radius=10,
@@ -119,9 +146,7 @@ class Steps(ctk.CTkFrame):
         for i, label in enumerate(self.LABELS):
             col = ctk.CTkFrame(self, fg_color="transparent")
             col.grid(row=0, column=i * 2)
-            dot = ctk.CTkLabel(col, text=str(i + 1), width=26, height=26,
-                               corner_radius=13, fg_color=SOFT, text_color=MUTED,
-                               font=font(12, "bold"))
+            dot = Circle(col, 26, str(i + 1), SOFT, MUTED, font(12, "bold"))
             dot.pack()
             ctk.CTkLabel(col, text=label, font=font(11), text_color=MUTED).pack()
             self.dots.append(dot)
@@ -132,11 +157,11 @@ class Steps(ctk.CTkFrame):
     def set(self, done_upto, current):
         for i, dot in enumerate(self.dots):
             if i < done_upto:
-                dot.configure(text="✓", fg_color=GREEN, text_color="#FFFFFF")
+                dot.set("✓", GREEN, "#FFFFFF")
             elif i == current:
-                dot.configure(text=str(i + 1), fg_color=BLUE, text_color="#FFFFFF")
+                dot.set(str(i + 1), BLUE, "#FFFFFF")
             else:
-                dot.configure(text=str(i + 1), fg_color=SOFT, text_color=MUTED)
+                dot.set(str(i + 1), SOFT, MUTED)
 
 
 # ---------------------------------------------------------------- confirm dialog
@@ -152,9 +177,7 @@ class ConfirmDialog(ctk.CTkToplevel):
         card = Card(self)
         card.pack(padx=18, pady=18, fill="both", expand=True)
 
-        ctk.CTkLabel(card, text="!", width=56, height=56, corner_radius=28,
-                     fg_color=AMBER, text_color="#FFFFFF",
-                     font=font(28, "bold")).pack(pady=(22, 8))
+        Circle(card, 56, "!", AMBER, "#FFFFFF", font(28, "bold")).pack(pady=(22, 8))
         ctk.CTkLabel(card, text=f"รีเซ็ตซับหมึก {model}?", font=font(20, "bold"),
                      text_color=TEXT).pack()
 
@@ -219,9 +242,8 @@ class App(ctk.CTk):
         super().__init__()
         ctk.set_appearance_mode("system")
         self.title(core.APP_TITLE + (" · โหมดทดสอบ" if core.MOCK else ""))
-        self.geometry("640x820")
-        self.minsize(600, 760)
         self.configure(fg_color=BG)
+        self._fit_to_screen(640, 820)
 
         self.jobs = queue.Queue()
         self.model = None
@@ -238,10 +260,23 @@ class App(ctk.CTk):
             self._set_state("error")
             self.hero_sub.configure(text="ไม่พบไฟล์ข้อมูลรุ่นเครื่องพิมพ์ (printers.pickle)")
 
+    def _fit_to_screen(self, width, height):
+        """Never open taller than the screen (small laptops, 125-150% scaling)."""
+        try:
+            scale = ctk.ScalingTracker.get_window_scaling(self)
+        except Exception:
+            scale = 1.0
+        screen_h = self.winfo_screenheight() / scale
+        screen_w = self.winfo_screenwidth() / scale
+        h = int(min(height, screen_h - 90))
+        w = int(min(width, screen_w - 40))
+        self.minsize(min(520, w), min(480, h))
+        self.geometry(f"{w}x{h}+{int((screen_w - w) / 2)}+{max(int((screen_h - h) / 2) - 30, 0)}")
+
     # -- layout
     def _build(self):
         wrap = ctk.CTkFrame(self, fg_color="transparent")
-        wrap.pack(fill="both", expand=True, padx=22, pady=18)
+        wrap.pack(fill="both", expand=True, padx=22, pady=(18, 10))
 
         # header
         head = ctk.CTkFrame(wrap, fg_color="transparent")
@@ -261,14 +296,59 @@ class App(ctk.CTk):
         self.steps = Steps(wrap)
         self.steps.pack(pady=(18, 10))
 
+        # bottom area is packed BEFORE the cards, so on a short screen the
+        # cards scroll instead of the buttons and links being cut off
+        bottom = ctk.CTkFrame(wrap, fg_color="transparent")
+        bottom.pack(side="bottom", fill="x", pady=(8, 0))
+
+        self.btn_primary = ctk.CTkButton(bottom, text="", height=52,
+                                         corner_radius=14, font=font(16, "bold"),
+                                         command=self._primary)
+        self.btn_primary.pack(fill="x")
+        self.btn_secondary = ctk.CTkButton(bottom, text="", height=40,
+                                           corner_radius=12, font=font(14),
+                                           fg_color="transparent", border_width=1,
+                                           border_color=BORDER, text_color=TEXT,
+                                           hover_color=SOFT,
+                                           command=self._secondary)
+        self.secondary_slot = ctk.CTkFrame(bottom, fg_color="transparent", height=0)
+        self.secondary_slot.pack(fill="x")
+
+        self.log_box = ctk.CTkTextbox(bottom, height=110, font=("Consolas", 11),
+                                      fg_color=CARD, text_color=MUTED,
+                                      border_width=1, border_color=BORDER,
+                                      corner_radius=12, wrap="word")
+        self.log_box.configure(state="disabled")
+
+        foot = ctk.CTkFrame(bottom, fg_color="transparent")
+        foot.pack(fill="x", side="bottom", pady=(6, 0))
+        link = dict(fg_color="transparent", hover_color=SOFT, text_color=BLUE,
+                    font=font(12), height=28, width=10)
+        ctk.CTkButton(foot, text="📁 เปิดโฟลเดอร์ไฟล์สำรอง",
+                      command=self._open_backups, **link).pack(side="left")
+        self.btn_log = ctk.CTkButton(foot, text="รายละเอียดทางเทคนิค ▾",
+                                     command=self._toggle_log, **link)
+        self.btn_log.pack(side="left", padx=4)
+        ctk.CTkLabel(foot, text=f"v{core.APP_VERSION} · epson_print_conf (EUPL-1.2)",
+                     font=font(11), text_color=MUTED).pack(side="right")
+
+        # middle: cards, scrollable when the window is short
+        mid = ctk.CTkScrollableFrame(wrap, fg_color="transparent",
+                                     scrollbar_button_color=BORDER,
+                                     scrollbar_button_hover_color=MUTED)
+        mid.pack(fill="both", expand=True)
+        self.mid = mid
+        mid.bind("<Configure>", lambda e: self.after_idle(self._update_scrollbar))
+        mid._parent_canvas.bind("<Configure>",
+                                lambda e: self.after_idle(self._update_scrollbar),
+                                add="+")
+
         # hero
-        hero = Card(wrap)
+        hero = Card(mid)
         hero.pack(fill="x", pady=(4, 10))
         inner = ctk.CTkFrame(hero, fg_color="transparent")
         inner.pack(fill="x", padx=20, pady=18)
-        self.hero_icon = ctk.CTkLabel(inner, text="?", width=64, height=64,
-                                      corner_radius=32, fg_color=GREY,
-                                      text_color="#FFFFFF", font=font(30, "bold"))
+        self.hero_icon = Circle(inner, 64, "?", GREY, "#FFFFFF", font(30, "bold"))
         self.hero_icon.pack(side="left", padx=(0, 16))
         texts = ctk.CTkFrame(inner, fg_color="transparent")
         texts.pack(side="left", fill="x", expand=True)
@@ -283,7 +363,7 @@ class App(ctk.CTk):
                                            progress_color=BLUE, fg_color=SOFT)
 
         # info row: printer + waste pads
-        row = ctk.CTkFrame(wrap, fg_color="transparent")
+        row = ctk.CTkFrame(mid, fg_color="transparent")
         row.pack(fill="x", pady=(0, 10))
         row.grid_columnconfigure((0, 1), weight=1, uniform="c")
 
@@ -319,7 +399,7 @@ class App(ctk.CTk):
             self.pad_pills.append(pill)
 
         # inks
-        inks = Card(wrap)
+        inks = Card(mid)
         inks.pack(fill="x", pady=(0, 12))
         ctk.CTkLabel(inks, text="ระดับหมึก", font=font(13, "bold"),
                      text_color=MUTED).pack(anchor="w", padx=16, pady=(14, 0))
@@ -331,43 +411,13 @@ class App(ctk.CTk):
             bar.pack(side="left", padx=26)
             self.ink_bars[name] = bar
 
-        # actions
-        actions = ctk.CTkFrame(wrap, fg_color="transparent")
-        actions.pack(fill="x")
-        self.btn_primary = ctk.CTkButton(actions, text="", height=52,
-                                         corner_radius=14, font=font(16, "bold"),
-                                         command=self._primary)
-        self.btn_primary.pack(fill="x")
-        self.btn_secondary = ctk.CTkButton(actions, text="", height=40,
-                                           corner_radius=12, font=font(14),
-                                           fg_color="transparent", border_width=1,
-                                           border_color=BORDER, text_color=TEXT,
-                                           hover_color=SOFT,
-                                           command=self._secondary)
-
-        # footer
-        foot = ctk.CTkFrame(wrap, fg_color="transparent")
-        foot.pack(fill="x", side="bottom")
-        self.log_box = ctk.CTkTextbox(wrap, height=110, font=("Consolas", 11),
-                                      fg_color=CARD, text_color=MUTED,
-                                      border_width=1, border_color=BORDER,
-                                      corner_radius=12, wrap="word")
-        self.log_box.configure(state="disabled")
-        link = dict(fg_color="transparent", hover_color=SOFT, text_color=BLUE,
-                    font=font(12), height=28, width=10)
-        ctk.CTkButton(foot, text="📁 เปิดโฟลเดอร์ไฟล์สำรอง",
-                      command=self._open_backups, **link).pack(side="left")
-        self.btn_log = ctk.CTkButton(foot, text="รายละเอียดทางเทคนิค ▾",
-                                     command=self._toggle_log, **link)
-        self.btn_log.pack(side="left", padx=4)
-        ctk.CTkLabel(foot, text=f"v{core.APP_VERSION} · epson_print_conf (EUPL-1.2)",
-                     font=font(11), text_color=MUTED).pack(side="right")
+        self.after(200, self._update_scrollbar)
 
     # -- state
     def _set_state(self, state, sub=None):
         self.ui_state = state
         icon, color, title, text = HERO[state]
-        self.hero_icon.configure(text=icon, fg_color=color)
+        self.hero_icon.set(icon, color)
         self.hero_title.configure(text=title)
         self.hero_sub.configure(text=sub if sub is not None else text)
 
@@ -404,7 +454,7 @@ class App(ctk.CTk):
         secondary = {"full": "ตรวจสอบอีกครั้ง", "ok": "รีเซ็ตซับหมึกอยู่ดี"}.get(state)
         if secondary:
             self.btn_secondary.configure(text=secondary, state="normal")
-            self.btn_secondary.pack(fill="x", pady=(8, 0))
+            self.btn_secondary.pack(fill="x", pady=(8, 0), in_=self.secondary_slot)
         else:
             self.btn_secondary.pack_forget()
 
@@ -423,15 +473,27 @@ class App(ctk.CTk):
     # -- footer helpers
     def _toggle_log(self):
         self.log_visible = not self.log_visible
-        w, h = self.winfo_width(), self.winfo_height()
         if self.log_visible:
-            self.log_box.pack(fill="x", pady=(8, 0))
+            self.log_box.pack(fill="x", pady=(8, 0), after=self.secondary_slot)
             self.btn_log.configure(text="ซ่อนรายละเอียด ▴")
-            self.geometry(f"{w}x{h + 130}")
         else:
             self.log_box.pack_forget()
-            self.geometry(f"{w}x{max(h - 130, 760)}")
             self.btn_log.configure(text="รายละเอียดทางเทคนิค ▾")
+        self.after(50, self._update_scrollbar)
+
+    def _update_scrollbar(self):
+        """Show the scrollbar only when the cards don't fit."""
+        try:
+            canvas = self.mid._parent_canvas
+            bar = self.mid._scrollbar
+            need = self.mid.winfo_reqheight() > canvas.winfo_height() + 2
+            if need and not bar.winfo_ismapped():
+                bar.grid()
+            elif not need and bar.winfo_ismapped():
+                bar.grid_remove()
+                canvas.yview_moveto(0)
+        except Exception:
+            pass
 
     def _open_backups(self):
         try:
