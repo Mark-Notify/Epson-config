@@ -23,7 +23,7 @@ if not exist venv (
     %PYTHON% -m venv venv || goto :error
 )
 echo [3/5] Installing packages...
-venv\Scripts\python -m pip install --quiet -r vendor\epson_print_conf\requirements.txt pyinstaller customtkinter==5.2.2 || goto :error
+venv\Scripts\python -m pip install --quiet -r vendor\epson_print_conf\requirements.txt pyinstaller customtkinter==5.2.2 pywebview==6.2.1 || goto :error
 
 echo [4/5] Building printer database...
 curl.exe -sSL -o vendor\epson.toml %TOML_URL% || goto :error
@@ -34,13 +34,18 @@ venv\Scripts\python -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --name EpsonInkPadReset ^
     --paths vendor\epson_print_conf ^
     --add-data "printers.pickle;." ^
+    --add-data "ui;ui" ^
     --hidden-import epson_usb_bridge ^
     --hidden-import updater ^
+    --hidden-import epson_reset_gui ^
+    --hidden-import pyprintlpr ^
+    --collect-submodules epson_escp2 ^
+    --collect-data webview ^
     --collect-submodules epson_usb ^
     --collect-all pysnmp ^
     --collect-data customtkinter ^
     --exclude-module black --exclude-module blib2to3 ^
-    epson_reset_gui.py || goto :error
+    app_web.py || goto :error
 
 echo.
 echo Done: dist\EpsonInkPadReset.exe
