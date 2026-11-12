@@ -37,6 +37,15 @@ jobs:
           PYTHON: python
         run: build.bat
 
+      - name: Self-test the exe
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP "selftest.json"
+          $p = Start-Process -FilePath dist/EpsonInkPadReset.exe -ArgumentList "--selftest", $out -Wait -PassThru
+          Get-Content $out
+          "Self-test: $(Get-Content $out)" >> $env:GITHUB_STEP_SUMMARY
+          if ($p.ExitCode -ne 0) { throw "self-test failed (exit $($p.ExitCode))" }
+
       - name: SHA-256
         shell: pwsh
         run: |

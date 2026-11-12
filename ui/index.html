@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Epson Ink Pad Reset</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- icon sprite: 24px grid, 1.8 stroke -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-6h4v6"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6" rx="1"/><rect x="10.5" y="6" width="3" height="11" rx="1"/><rect x="15.5" y="13" width="3" height="4" rx="1"/></symbol>
+    <symbol id="i-tool" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9L20 11l-9 9a2.1 2.1 0 0 1-3-3l9-9 .6.6"/><path d="M14.5 5.5 17 3l4 4-2.5 2.5"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+    <symbol id="i-printer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V3.5h10V8"/><rect x="3" y="8" width="18" height="9" rx="2.5"/><path d="M7 14h10v6.5H7z"/><circle cx="17.5" cy="11" r=".6" fill="currentColor"/></symbol>
+    <symbol id="i-usb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V4"/><path d="m9 6.5 3-3.5 3 3.5"/><path d="M12 15 7.5 12V9.5"/><path d="m12 17 4.5-3V11"/><circle cx="7.5" cy="8.5" r="1.3"/><rect x="15.3" y="9" width="2.4" height="2.4" rx=".4"/><circle cx="12" cy="20" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9a14 14 0 0 1 19 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 13 0"/><path d="M8.7 16a5 5 0 0 1 6.6 0"/><circle cx="12" cy="19.3" r="1.1" fill="currentColor"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 20.5V16h-4.5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7.5v6"/><circle cx="12" cy="17.2" r=".9" fill="currentColor"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4"/><circle cx="12" cy="16.8" r=".8" fill="currentColor"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r=".8" fill="currentColor"/></symbol>
+    <symbol id="i-question" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.5-1.5 1.1-1.5 2.1v.5"/><circle cx="12" cy="17.6" r=".9" fill="currentColor"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6.5 7 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 10 12 3 12 3z"/><path d="M9 15a3 3 0 0 0 3 3"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.3 7.5 9.5 4.3-1.2 7.5-5 7.5-9.5V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5h11l3.5 3.5v12a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 19V5A1.5 1.5 0 0 1 6 3.5z"/><path d="M8 3.5v5h7v-5"/><rect x="7.5" y="13" width="9" height="7.5" rx="1"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.5v5M15 2.5v5"/><path d="M6.5 7.5h11V11a5.5 5.5 0 0 1-11 0z"/><path d="M12 16.5v5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M9.5 2.5h5"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v8"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M3.5 14.5h17M9 4.5v15M15 4.5v15"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.8 9l5.7 1.9-5.7 1.9L12 18.5l-1.8-5.7L4.5 11 10.2 9z"/><path d="M19 3v3M17.5 4.5h3"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2.5 4.5 13.5H12l-1 8 8.5-11H12z"/></symbol>
+    <symbol id="i-restore" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5"/><path d="M4 4v4.5h4.5"/><path d="M12 8v4l3 1.5"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7A1.5 1.5 0 0 1 5 5.5h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"/><path d="m7.5 10 4.5 4.5 4.5-4.5"/><path d="M4.5 16.5V19a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-2.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="m7 10 3 2.5L7 15"/><path d="M12.5 15H17"/></symbol>
+    <symbol id="i-pad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7" width="17" height="10" rx="2.5"/><path d="M6.5 12c1.5-1.6 3-1.6 4.5 0s3 1.6 4.5 0 1.5-.8 2 0"/></symbol>
+  </defs>
+</svg>
+
+<div class="backdrop" aria-hidden="true">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
+  <div class="grain"></div>
+</div>
+
+<div class="shell">
+  <!-- ======================================================= sidebar -->
+  <aside class="sidebar glass">
+    <div class="brand">
+      <div class="brand-mark"><svg><use href="#i-printer"/></svg></div>
+      <div class="brand-text">
+        <div class="brand-name">Epson Ink Pad</div>
+        <div class="brand-sub">รีเซ็ตและดูแลเครื่องพิมพ์</div>
+      </div>
+    </div>
+    <nav class="nav" id="nav">
+      <button class="nav-btn active" data-page="home"><svg><use href="#i-home"/></svg><span>ภาพรวม</span></button>
+      <button class="nav-btn" data-page="stats"><svg><use href="#i-chart"/></svg><span>สถิติเครื่อง</span></button>
+      <button class="nav-btn" data-page="care"><svg><use href="#i-tool"/></svg><span>บำรุงรักษา</span><i class="badge-dot hidden" id="careDot"></i></button>
+      <button class="nav-btn" data-page="history"><svg><use href="#i-history"/></svg><span>ประวัติและสำรอง</span></button>
+      <button class="nav-btn" data-page="models"><svg><use href="#i-list"/></svg><span>รุ่นที่รองรับ</span></button>
+      <div class="nav-sep"></div>
+      <button class="nav-btn" data-page="settings"><svg><use href="#i-gear"/></svg><span>ตั้งค่า</span><i class="badge-dot hidden" id="updDot"></i></button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="row"><span id="verLabel">v—</span><button class="link" id="footUpd">ตรวจหาอัปเดต</button></div>
+      <div class="small" style="margin-top:2px">EUPL-1.2 · epson_print_conf</div>
+    </div>
+  </aside>
+
+  <!-- ======================================================= main -->
+  <main class="main">
+    <div class="banner" id="updBanner">
+      <svg><use href="#i-download"/></svg>
+      <div class="b-text" id="updText">มีเวอร์ชันใหม่</div>
+      <div class="meter hidden" id="updMeter"><span></span></div>
+      <button class="btn sm white" id="updGo">อัปเดตเลย</button>
+      <button class="btn sm clear" id="updLater">ภายหลัง</button>
+    </div>
+
+    <header class="topbar glass">
+      <div class="page-title" id="pageTitle">ภาพรวม<small>สถานะเครื่องพิมพ์และซับหมึก</small></div>
+      <div class="segmented" id="connSeg" role="tablist" aria-label="การเชื่อมต่อ">
+        <button data-conn="usb" class="on"><svg><use href="#i-usb"/></svg>USB</button>
+        <button data-conn="wifi"><svg><use href="#i-wifi"/></svg>Wi‑Fi</button>
+      </div>
+      <div class="host-box" id="hostBox">
+        <input class="input num" id="hostInput" placeholder="IP เช่น 192.168.1.50" list="recentHosts" spellcheck="false">
+        <datalist id="recentHosts"></datalist>
+        <button class="btn sm" id="scanBtn" title="ค้นหาเครื่องพิมพ์ในวงแลน"><svg><use href="#i-search"/></svg>ค้นหา</button>
+      </div>
+      <div class="device-chip" id="deviceChip"><i class="dot"></i><span>ยังไม่ได้เชื่อมต่อ</span></div>
+    </header>
+
+    <div class="content" id="content">
+
+      <!-- ===================================================== HOME -->
+      <section class="page active" id="page-home">
+        <div class="grid g-12">
+          <div class="glass card hero span-12" id="hero">
+            <div class="orb" id="heroOrb"><svg><use href="#i-question"/></svg></div>
+            <div>
+              <h2 id="heroTitle">พร้อมเริ่มใช้งาน</h2>
+              <p id="heroSub">เสียบสาย USB และเปิดเครื่องพิมพ์ แล้วกด “ตรวจสอบเครื่องพิมพ์”</p>
+              <div class="steps" id="steps"></div>
+              <div class="actions" id="heroActions"></div>
+            </div>
+          </div>
+
+          <div class="stack span-12" id="alerts"></div>
+
+          <div class="glass card span-4">
+            <div class="card-h"><span class="icon-tile"><svg><use href="#i-printer"/></svg></span><h3>เครื่องพิมพ์</h3></div>
+            <dl class="kv">
+              <dt>รุ่น</dt><dd id="kvModel">—</dd>
+              <dt>สถานะ</dt><dd id="kvStatus">—</dd>
+              <dt>ซีเรียล</dt><dd id="kvSerial" class="num">—</dd>
+              <dt>เชื่อมต่อ</dt><dd id="kvConn">—</dd>
+              <dt>รองรับรีเซ็ต</dt><dd id="kvSupport">—</dd>
+            </dl>
+          </div>
+
+          <div class="glass card span-4">
+            <div class="card-h"><span class="icon-tile"><svg><use href="#i-pad"/></svg></span><h3>แผ่นซับหมึก</h3><span class="spacer"></span><span class="pill" id="padPill">—</span></div>
+            <div class="gauges" id="gauges"></div>
+            <p class="small muted" style="margin:10px 2px 0" id="padNote">ตัวเลขจากตัวนับในเครื่อง ถึง 100% เครื่องจะหยุดพิมพ์</p>
+          </div>
+
+          <div class="glass card span-4">
+            <div class="card-h"><span class="icon-tile"><svg><use href="#i-drop"/></svg></span><h3>ระดับหมึก</h3><span class="spacer"></span><span class="pill" id="inkPill">—</span></div>
+            <div class="inks" id="inks"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================== STATS -->
+      <section class="page" id="page-stats">
+        <div id="statsBody"></div>
+      </section>
+
+      <!-- ===================================================== CARE -->
+      <section class="page" id="page-care">
+        <div id="careNeed"></div>
+        <div id="careBody" class="hidden">
+          <div class="tools">
+            <div class="glass tool" style="--c1:#2F6BFF;--c2:#38BDF8">
+              <div class="t-icon"><svg><use href="#i-grid"/></svg></div>
+              <h4>พิมพ์หน้าเช็กหัวพิมพ์</h4>
+              <p>พิมพ์ลายเส้นทดสอบ (nozzle check) ถ้าเส้นขาดหรือสีหาย ให้ล้างหัวพิมพ์</p>
+              <button class="btn primary" data-maint="nozzle_check"><svg><use href="#i-printer"/></svg>พิมพ์หน้าเช็ก</button>
+            </div>
+            <div class="glass tool" style="--c1:#0EA5A4;--c2:#34D399">
+              <div class="t-icon"><svg><use href="#i-sparkle"/></svg></div>
+              <h4>ล้างหัวพิมพ์</h4>
+              <p>ล้างตามปกติ ใช้หมึกน้อย ทำได้ 1–2 รอบแล้วพิมพ์หน้าเช็กดูผล</p>
+              <button class="btn" data-maint="clean"><svg><use href="#i-sparkle"/></svg>เริ่มล้างหัวพิมพ์</button>
+            </div>
+            <div class="glass tool" style="--c1:#F59E0B;--c2:#F43F5E">
+              <div class="t-icon"><svg><use href="#i-bolt"/></svg></div>
+              <h4>ล้างแบบเข้ม (Power Clean)</h4>
+              <p>ใช้หมึกมาก และหมึกเสียไหลลงแผ่นซับเยอะ ใช้เมื่อล้างปกติแล้วไม่หาย</p>
+              <button class="btn" data-maint="power_clean"><svg><use href="#i-bolt"/></svg>ล้างแบบเข้ม</button>
+            </div>
+          </div>
+          <div class="grid g-12" style="margin-top:14px">
+            <div class="glass card span-7">
+              <div class="card-h"><span class="icon-tile"><svg><use href="#i-clock"/></svg></span><h3>ปิดเครื่องอัตโนมัติ (Power Off Timer)</h3></div>
+              <p class="small muted" style="margin:-4px 0 12px">เครื่องพิมพ์จะปิดเองเมื่อไม่ได้ใช้งานตามเวลาที่ตั้ง โปรแกรมสำรองข้อมูลก่อนเปลี่ยนทุกครั้ง</p>
+              <div id="timerBody"><span class="muted small">กำลังอ่านค่า...</span></div>
+            </div>
+            <div class="glass card span-5">
+              <div class="card-h"><span class="icon-tile"><svg><use href="#i-printer"/></svg></span><h3>ส่งคำสั่งผ่าน</h3></div>
+              <div id="queueBody" class="small"></div>
+              <p class="small muted" style="margin:10px 0 0">คำสั่งเช็กหัว/ล้างหัวผ่าน USB ส่งทางคิวพิมพ์ของ Windows ส่วน Wi‑Fi ส่งตรงไปที่เครื่องพิมพ์</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================== HISTORY -->
+      <section class="page" id="page-history">
+        <div class="grid g-12">
+          <div class="glass card span-12" id="adviceCard"></div>
+          <div class="glass card span-7">
+            <div class="card-h"><span class="icon-tile"><svg><use href="#i-history"/></svg></span><h3>ประวัติการทำงาน</h3><span class="spacer"></span><button class="btn sm ghost icon" id="histReload" title="โหลดใหม่"><svg><use href="#i-refresh"/></svg></button></div>
+            <div class="list" id="histList"></div>
+          </div>
+          <div class="glass card span-5">
+            <div class="card-h"><span class="icon-tile"><svg><use href="#i-save"/></svg></span><h3>ไฟล์สำรอง EEPROM</h3><span class="spacer"></span><button class="btn sm ghost" id="openFolder"><svg><use href="#i-folder"/></svg>เปิดโฟลเดอร์</button></div>
+            <div class="list" id="bkList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================== MODELS -->
+      <section class="page" id="page-models">
+        <div class="toolbar">
+          <label class="search"><svg><use href="#i-search"/></svg><input class="input" id="modelSearch" placeholder="ค้นหารุ่น เช่น L3110, XP-, ET-2720" spellcheck="false"></label>
+          <div class="segmented" id="modelFilter">
+            <button data-f="all" class="on">ทั้งหมด</button>
+            <button data-f="timer">ตั้งเวลาปิดได้</button>
+            <button data-f="stats">มีสถิติ</button>
+          </div>
+          <span class="pill info num" id="modelCount">—</span>
+        </div>
+        <div class="models" id="modelGrid"></div>
+      </section>
+
+      <!-- ===================================================== SETTINGS -->
+      <section class="page" id="page-settings">
+        <div class="grid g-12">
+          <div class="glass card span-6">
+            <div class="card-h"><span class="icon-tile"><svg><use href="#i-drop"/></svg></span><h3>แจ้งเตือนหมึกใกล้หมด</h3></div>
+            <p class="small muted" style="margin:-4px 0 14px">เตือนเมื่อหมึกสีใดเหลือน้อยกว่าหรือเท่ากับค่านี้ (ตรวจทุกครั้งที่กดตรวจสอบเครื่องพิมพ์)</p>
+            <div class="range-row"><input type="range" min="5" max="50" step="1" id="inkRange"><span class="range-val num" id="inkRangeVal">20%</span></div>
+          </div>
+          <div class="glass card span-6">
+            <div class="card-h"><span class="icon-tile"><svg><use href="#i-download"/></svg></span><h3>เวอร์ชันโปรแกรม</h3></div>
+            <dl class="kv"><dt>เวอร์ชันที่ใช้อยู่</dt><dd id="setVer" class="num">—</dd><dt>อัปเดต</dt><dd id="setUpd">—</dd></dl>
+            <div style="display:flex;gap:10px;margin-top:14px"><button class="btn sm" id="setUpdBtn"><svg><use href="#i-refresh"/></svg>ตรวจหาอัปเดต</button></div>
+          </div>
+          <div class="glass card span-12">
+            <div class="card-h"><span class="icon-tile"><svg><use href="#i-terminal"/></svg></span><h3>รายละเอียดทางเทคนิค</h3><span class="spacer"></span><button class="btn sm ghost" id="logReload"><svg><use href="#i-refresh"/></svg>โหลดใหม่</button></div>
+            <p class="small muted" style="margin:-4px 0 6px">ไฟล์สำรองและประวัติอยู่ที่ <span id="bkDir" class="num">—</span></p>
+            <div class="scroll-box"><pre class="log" id="techLog">—</pre></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
+<div class="toasts" id="toasts"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
