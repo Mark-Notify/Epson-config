@@ -6,9 +6,11 @@
 
 ## ดาวน์โหลด
 
-**[⬇ EpsonInkPadReset.exe (v2.0.0)](https://github.com/Mark-Notify/Epson-config/raw/main/release/EpsonInkPadReset.exe)** · Windows 10/11 64-bit · ไม่ต้องลง Python
+**[⬇ EpsonInkPadReset.exe (เวอร์ชันล่าสุด)](https://github.com/Mark-Notify/Epson-config/releases/latest/download/EpsonInkPadReset.exe)** · Windows 10/11 64-bit · ไม่ต้องลง Python
 
-SHA-256: `4af01d27ab4457594ce6c7d51624f4b3dc18b339f5d8c479c656300bc2e33b8b`
+ดูทุกเวอร์ชันและ SHA-256 ได้ที่หน้า [Releases](https://github.com/Mark-Notify/Epson-config/releases)
+
+โปรแกรมเช็กอัปเดตเองตอนเปิด ถ้ามีเวอร์ชันใหม่จะขึ้นแถบสีน้ำเงินด้านบน กด **อัปเดตเลย** แล้วโปรแกรมจะโหลด ตรวจ SHA-256 ปิดตัวเอง และเปิดเวอร์ชันใหม่ให้ (กด **ตรวจหาอัปเดต** ที่มุมล่างซ้ายเพื่อเช็กเองก็ได้)
 
 ไฟล์ไม่ได้เซ็นชื่อดิจิทัล ตอนเปิดครั้งแรก Windows อาจขึ้น "Windows protected your PC" ให้กด **More info** แล้ว **Run anyway**
 
@@ -58,10 +60,20 @@ set EPSON_RESET_MOCK=1
 venv\Scripts\python epson_reset_gui.py
 ```
 
+## ออกเวอร์ชันใหม่
+
+GitHub Actions ([build.yml](.github/workflows/build.yml)) build .exe บน Windows ให้ทุกครั้งที่ push ขึ้น `main` (โหลดได้จากแท็บ Actions) ถ้าจะปล่อยให้ผู้ใช้อัปเดต:
+
+1. แก้ `APP_VERSION` ใน `epson_reset_core.py` เช่น `"2.2.0"`
+2. commit แล้วติด tag ให้ตรงกัน: `git tag v2.2.0` แล้ว `git push origin main v2.2.0`
+3. Actions จะ build และสร้าง Release พร้อม `EpsonInkPadReset.exe` กับ `.sha256` ผู้ใช้ทุกคนจะเห็นแถบอัปเดตตอนเปิดโปรแกรมครั้งถัดไป
+
+ถ้าเลข tag ไม่ตรงกับ `APP_VERSION` Actions จะหยุดและไม่สร้าง Release
+
 ## เครดิตและสัญญาอนุญาต
 
 - UI สร้างด้วย [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) (MIT)
 - [epson_print_conf](https://github.com/Ircama/epson_print_conf) โดย Ircama, สัญญาอนุญาต EUPL-1.2 ใช้คุยกับเครื่องพิมพ์ผ่าน USB และเขียน EEPROM
 - ข้อมูลรุ่นเครื่องพิมพ์จาก `epson.toml` ของ [ReInkPy](https://codeberg.org/atufi/reinkpy)
 
-repo นี้ไม่ได้รวมซอร์สของสองโปรเจกต์ข้างต้นไว้ `build.bat` โหลดมาตอน build แต่ไฟล์ `release/EpsonInkPadReset.exe` มีโค้ดของ epson_print_conf (EUPL-1.2) อยู่ข้างใน build จาก commit `2dc3bebacf314f22bd6484acdb2a7434c7cc00ad` ซอร์สฉบับเต็มดูได้ที่ https://github.com/Ircama/epson_print_conf/tree/2dc3bebacf314f22bd6484acdb2a7434c7cc00ad
+repo นี้ไม่ได้รวมซอร์สของสองโปรเจกต์ข้างต้นไว้ `build.bat` โหลดมาตอน build แต่ไฟล์ .exe ในหน้า Releases มีโค้ดของ epson_print_conf (EUPL-1.2) อยู่ข้างใน build จาก commit `2dc3bebacf314f22bd6484acdb2a7434c7cc00ad` ซอร์สฉบับเต็มดูได้ที่ https://github.com/Ircama/epson_print_conf/tree/2dc3bebacf314f22bd6484acdb2a7434c7cc00ad

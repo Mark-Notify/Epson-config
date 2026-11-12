@@ -1,0 +1,61 @@
+name: Build
+
+# push to main  -> build the exe and keep it as a workflow artifact
+# push tag v*   -> build, then publish a GitHub Release with the exe and its
+#                  SHA-256 (the in-app updater reads the latest release)
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check version matches tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path epson_reset_core.py -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
+          if ("v$v" -ne "${{ github.ref_name }}") {
+            throw "APP_VERSION $v in epson_reset_core.py does not match tag ${{ github.ref_name }}"
+          }
+
+      - name: Build exe
+        shell: cmd
+        env:
+          PYTHON: python
+        run: build.bat
+
+      - name: SHA-256
+        shell: pwsh
+        run: |
+          $h = (Get-FileHash dist/EpsonInkPadReset.exe -Algorithm SHA256).Hash.ToLower()
+          [IO.File]::WriteAllText("dist/EpsonInkPadReset.exe.sha256", "$h  EpsonInkPadReset.exe`n")
+          "SHA-256: $h" >> $env:GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EpsonInkPadReset
+          path: |
+            dist/EpsonInkPadReset.exe
+            dist/EpsonInkPadReset.exe.sha256
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/EpsonInkPadReset.exe
+            dist/EpsonInkPadReset.exe.sha256
+          generate_release_notes: true

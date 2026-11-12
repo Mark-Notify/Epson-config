@@ -7,12 +7,15 @@ Epson Ink Pad Reset - หน้าต่างกดใช้งานง่า�
 
 import os
 import queue
+import sys
 import threading
 import traceback
+import webbrowser
 
 import customtkinter as ctk
 
 import epson_reset_core as core
+import updater
 
 # ---------------------------------------------------------------- theme
 FONT = "Leelawadee UI"
@@ -252,10 +255,13 @@ class App(ctk.CTk):
         self.ui_state = "idle"
         self.log_visible = False
         self.last_backup = None
+        self.release = None
+        self.dl_progress = None
 
         self._build()
         self._set_state("idle")
         self.after(100, self._poll)
+        self.after(1500, lambda: self.check_update(silent=True))
         if not core.CONF:
             self._set_state("error")
             self.hero_sub.configure(text="ไม่พบไฟล์ข้อมูลรุ่นเครื่องพิมพ์ (printers.pickle)")
@@ -278,9 +284,34 @@ class App(ctk.CTk):
         wrap = ctk.CTkFrame(self, fg_color="transparent")
         wrap.pack(fill="both", expand=True, padx=22, pady=(18, 10))
 
+        # update banner (shown only when a newer release exists)
+        self.update_bar = ctk.CTkFrame(wrap, fg_color=BLUE, corner_radius=14)
+        ub = ctk.CTkFrame(self.update_bar, fg_color="transparent")
+        ub.pack(fill="x", padx=14, pady=10)
+        ctk.CTkLabel(ub, text="⬆", font=font(18, "bold"),
+                     text_color="#FFFFFF").pack(side="left", padx=(0, 8))
+        self.update_text = ctk.CTkLabel(ub, text="", font=font(13, "bold"),
+                                        text_color="#FFFFFF", anchor="w",
+                                        justify="left", wraplength=330)
+        self.update_text.pack(side="left", fill="x", expand=True)
+        self.update_later = ctk.CTkButton(
+            ub, text="ภายหลัง", width=70, height=32, corner_radius=10,
+            font=font(12), fg_color="transparent", hover_color=BLUE_H,
+            text_color="#FFFFFF", command=lambda: self.update_bar.pack_forget())
+        self.update_later.pack(side="right", padx=(6, 0))
+        self.update_btn = ctk.CTkButton(
+            ub, text="อัปเดตเลย", width=100, height=32, corner_radius=10,
+            font=font(13, "bold"), fg_color="#FFFFFF", hover_color="#DBEAFE",
+            text_color=BLUE, command=self.on_update)
+        self.update_btn.pack(side="right")
+        self.update_progress = ctk.CTkProgressBar(
+            self.update_bar, height=6, progress_color="#FFFFFF",
+            fg_color=BLUE_H)
+
         # header
         head = ctk.CTkFrame(wrap, fg_color="transparent")
         head.pack(fill="x")
+        self.head = head
         ctk.CTkLabel(head, text="🖨", font=font(30)).pack(side="left", padx=(0, 10))
         titles = ctk.CTkFrame(head, fg_color="transparent")
         titles.pack(side="left")
@@ -329,8 +360,14 @@ class App(ctk.CTk):
         self.btn_log = ctk.CTkButton(foot, text="รายละเอียดทางเทคนิค ▾",
                                      command=self._toggle_log, **link)
         self.btn_log.pack(side="left", padx=4)
-        ctk.CTkLabel(foot, text=f"v{core.APP_VERSION} · epson_print_conf (EUPL-1.2)",
-                     font=font(11), text_color=MUTED).pack(side="right")
+        self.btn_upd = ctk.CTkButton(foot, text="ตรวจหาอัปเดต",
+                                     command=lambda: self.check_update(silent=False),
+                                     **link)
+        self.btn_upd.pack(side="left", padx=4)
+        self.version_label = ctk.CTkLabel(
+            foot, text=f"v{core.APP_VERSION} · EUPL-1.2", font=font(11),
+            text_color=MUTED)
+        self.version_label.pack(side="right")
 
         # middle: cards, scrollable when the window is short
         mid = ctk.CTkScrollableFrame(wrap, fg_color="transparent",
@@ -447,6 +484,9 @@ class App(ctk.CTk):
             "failed": ("ตรวจสอบอีกครั้ง", BLUE, BLUE_H),
             "backup_failed": ("ตรวจสอบอีกครั้ง", BLUE, BLUE_H),
         }[state]
+        if hasattr(self, "update_btn") and self.release is not None \
+                and self.dl_progress is None:
+            self.update_btn.configure(state="disabled" if busy else "normal")
         self.btn_primary.configure(text=primary[0], fg_color=primary[1],
                                    hover_color=primary[2],
                                    state="disabled" if busy else "normal")
@@ -520,6 +560,8 @@ class App(ctk.CTk):
         threading.Thread(target=worker, daemon=True).start()
 
     def _poll(self):
+        if self.dl_progress is not None:
+            self.update_progress.set(self.dl_progress)
         try:
             while True:
                 done, result, exc = self.jobs.get_nowait()
@@ -630,7 +672,99 @@ class App(ctk.CTk):
             self._set_state("failed")
 
 
+# ---------------------------------------------------------------- updates
+def _bg(app, func, done, *args):
+    def worker():
+        try:
+            app.jobs.put((done, func(*args), None))
+        except Exception as exc:
+            app.jobs.put((done, None, exc))
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
+class UpdateMixin:
+    def check_update(self, silent=True):
+        if not silent:
+            self.btn_upd.configure(text="กำลังตรวจ...", state="disabled")
+        _bg(self, updater.check,
+            lambda r, e: self.after_check_update(r, e, silent), core.APP_VERSION)
+
+    def after_check_update(self, release, exc, silent):
+        self.btn_upd.configure(text="ตรวจหาอัปเดต", state="normal")
+        if exc is not None:
+            if not silent:
+                self._log(f"ตรวจหาอัปเดตไม่ได้: {exc}")
+                self._flash_version("ตรวจหาอัปเดตไม่ได้ (เช็กอินเทอร์เน็ต)", RED)
+            return
+        if release is None:
+            if not silent:
+                self._flash_version(f"v{core.APP_VERSION} เป็นเวอร์ชันล่าสุดแล้ว ✓", GREEN)
+            return
+        self.release = release
+        self.update_text.configure(
+            text=f"มีเวอร์ชันใหม่ v{release.version} (ตอนนี้ v{core.APP_VERSION})")
+        self.update_btn.configure(text="อัปเดตเลย", command=self.on_update,
+                                  state="disabled" if self.ui_state == "busy" else "normal")
+        self.update_later.pack(side="right", padx=(6, 0))
+        if not self.update_bar.winfo_ismapped():
+            self.update_bar.pack(fill="x", pady=(0, 12), before=self.head)
+
+    def _flash_version(self, text, color):
+        self.version_label.configure(text=text, text_color=color)
+        self.after(4000, lambda: self.version_label.configure(
+            text=f"v{core.APP_VERSION} · EUPL-1.2", text_color=MUTED))
+
+    def on_update(self):
+        if not self.release or self.ui_state == "busy":
+            return
+        if not updater.is_frozen():
+            webbrowser.open(self.release.page)
+            return
+        self.update_btn.configure(text="กำลังโหลด...", state="disabled")
+        self.update_later.pack_forget()
+        self.update_text.configure(text=f"กำลังดาวน์โหลด v{self.release.version}...")
+        self.dl_progress = 0.0
+        self.update_progress.set(0)
+        self.update_progress.pack(fill="x", padx=14, pady=(0, 10))
+
+        def progress(value):
+            self.dl_progress = value
+
+        _bg(self, updater.download, self.after_download, self.release,
+            core.APP_VERSION, progress)
+
+    def after_download(self, path, exc):
+        self.dl_progress = None
+        self.update_progress.pack_forget()
+        if exc is not None:
+            self._log(f"อัปเดตไม่สำเร็จ: {exc}")
+            msg = ("ไฟล์ที่โหลดมาไม่ตรงกับต้นฉบับ จึงไม่ได้ติดตั้ง"
+                   if "checksum" in str(exc) else "ดาวน์โหลดไม่สำเร็จ ลองใหม่อีกครั้ง")
+            self.update_text.configure(text=msg)
+            self.update_btn.configure(text="ลองอีกครั้ง", state="normal")
+            self.update_later.pack(side="right", padx=(6, 0))
+            return
+        if updater.can_install_in_place(path):
+            self.update_text.configure(text="กำลังติดตั้ง โปรแกรมจะปิดแล้วเปิดใหม่เองในไม่กี่วินาที")
+            self.update_btn.configure(state="disabled")
+            updater.install(path)
+            self.after(400, self.destroy)
+        else:
+            self.update_text.configure(
+                text=f"โหลดไว้ที่ {path}\nโฟลเดอร์โปรแกรมเขียนไม่ได้ ปิดโปรแกรมแล้วใช้ไฟล์นี้แทน")
+            self.update_btn.configure(text="เปิดโฟลเดอร์", state="normal",
+                                      command=lambda: os.startfile(str(path.parent)))
+
+
+for _name, _func in vars(UpdateMixin).items():
+    if callable(_func) and not _name.startswith("__"):
+        setattr(App, _name, _func)
+
+
 def main():
+    if updater.handle_command_line(sys.argv):
+        return
     App().mainloop()
 
 

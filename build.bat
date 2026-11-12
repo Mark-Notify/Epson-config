@@ -5,6 +5,7 @@ rem  Build EpsonInkPadReset.exe
 rem  ต้องมี: Python 3.10+ (คำสั่ง py), git, curl (มากับ Windows 10/11)
 rem ============================================================
 cd /d "%~dp0"
+if not defined PYTHON set PYTHON=py
 
 set EPC_COMMIT=2dc3bebacf314f22bd6484acdb2a7434c7cc00ad
 set TOML_URL=https://codeberg.org/atufi/reinkpy/raw/branch/main/reinkpy/epson.toml
@@ -19,7 +20,7 @@ git -C vendor\epson_print_conf checkout --quiet %EPC_COMMIT% || goto :error
 
 if not exist venv (
     echo [2/5] Creating virtual environment...
-    py -m venv venv || goto :error
+    %PYTHON% -m venv venv || goto :error
 )
 echo [3/5] Installing packages...
 venv\Scripts\python -m pip install --quiet -r vendor\epson_print_conf\requirements.txt pyinstaller customtkinter==5.2.2 || goto :error
@@ -34,6 +35,7 @@ venv\Scripts\python -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --paths vendor\epson_print_conf ^
     --add-data "printers.pickle;." ^
     --hidden-import epson_usb_bridge ^
+    --hidden-import updater ^
     --collect-submodules epson_usb ^
     --collect-all pysnmp ^
     --collect-data customtkinter ^
