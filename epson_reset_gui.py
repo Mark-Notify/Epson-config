@@ -1,313 +1,457 @@
 # -*- coding: utf-8 -*-
 """
-Epson Ink Pad Reset - หน้าต่างกดใช้งานง่ายสำหรับเช็กสถานะและรีเซ็ตตัวนับซับหมึก
-ของเครื่องพิมพ์ Epson ผ่านสาย USB
-
-ใช้ไลบรารี epson_print_conf (Ircama, EUPL-1.2) และค่าคอนฟิกรุ่นจาก
-epson.toml ของ ReInkPy (แปลงเป็น printers.pickle ตอน build)
+Epson Ink Pad Reset - หน้าต่างกดใช้งานง่าย (customtkinter)
 
 โหมดทดสอบโดยไม่มีเครื่องพิมพ์:  set EPSON_RESET_MOCK=1
 """
 
-import copy
-import datetime
-import logging
 import os
-import pickle
 import queue
-import re
-import sys
 import threading
 import traceback
-import tkinter as tk
-from pathlib import Path
-from tkinter import messagebox, ttk
 
-APP_TITLE = "Epson Ink Pad Reset"
-APP_VERSION = "1.0.0"
+import customtkinter as ctk
+
+import epson_reset_core as core
+
+# ---------------------------------------------------------------- theme
+FONT = "Leelawadee UI"
+
+BG = ("#EEF2F7", "#111318")
+CARD = ("#FFFFFF", "#1B1E25")
+BORDER = ("#E3E8EF", "#2A2E37")
+TEXT = ("#111827", "#E8EAED")
+MUTED = ("#6B7280", "#9AA0A6")
+SOFT = ("#F5F7FA", "#22262E")
+
+BLUE = ("#2563EB", "#3B82F6")
+BLUE_H = ("#1D4ED8", "#2563EB")
+RED = ("#DC2626", "#EF4444")
+RED_H = ("#B91C1C", "#DC2626")
+GREEN = ("#16A34A", "#22C55E")
+AMBER = ("#D97706", "#F59E0B")
+GREY = ("#9CA3AF", "#6B7280")
+
+INK_COLORS = {
+    "Black": ("#1F2937", "#D1D5DB"),
+    "Cyan": ("#06B6D4", "#22D3EE"),
+    "Magenta": ("#DB2777", "#F472B6"),
+    "Yellow": ("#EAB308", "#FACC15"),
+}
+
+HERO = {
+    "idle": ("?", GREY, "พร้อมเริ่มใช้งาน",
+             "เสียบสาย USB และเปิดเครื่องพิมพ์ แล้วกด \"ตรวจสอบเครื่องพิมพ์\""),
+    "busy": ("…", BLUE, "กำลังทำงาน", ""),
+    "error": ("!", RED, "ติดต่อเครื่องพิมพ์ไม่ได้",
+              "เช็กว่าเสียบสาย USB และเปิดเครื่องแล้ว ปิดโปรแกรมอื่นที่ใช้เครื่องพิมพ์ "
+              "(เช่น WIC Reset) แล้วลองใหม่"),
+    "ok": ("✓", GREEN, "เครื่องพิมพ์ปกติ", "ซับหมึกยังไม่เต็ม ใช้งานต่อได้เลย"),
+    "full": ("!", RED, "ซับหมึกเต็ม",
+             "เครื่องพิมพ์หยุดทำงานเพราะตัวนับซับหมึกเต็ม กด \"รีเซ็ตซับหมึก\" เพื่อแก้"),
+    "unsupported": ("?", AMBER, "ยังไม่รองรับรุ่นนี้",
+                    "อ่านข้อมูลเครื่องได้ แต่ไม่มีข้อมูลสำหรับรีเซ็ตรุ่นนี้"),
+    "done": ("✓", GREEN, "รีเซ็ตสำเร็จ",
+             "ปิดเครื่องพิมพ์ด้วยปุ่ม Power รอไฟดับ เปิดใหม่ แล้วกด \"ตรวจสอบอีกครั้ง\""),
+    "failed": ("!", RED, "รีเซ็ตไม่สำเร็จ",
+               "เครื่องพิมพ์ไม่รับคำสั่ง ลองปิด-เปิดเครื่องพิมพ์แล้วทำใหม่"),
+    "backup_failed": ("!", RED, "สำรองข้อมูลไม่สำเร็จ",
+                      "จึงยังไม่ได้รีเซ็ต เพื่อความปลอดภัย ลองกดตรวจสอบแล้วทำใหม่"),
+}
 
 
-# ---------------------------------------------------------------- paths
-def app_dir() -> Path:
-    """Folder holding bundled files (PyInstaller) or this script."""
-    if getattr(sys, "frozen", False):
-        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
-    return Path(__file__).resolve().parent
+def font(size, weight="normal"):
+    return ctk.CTkFont(family=FONT, size=size, weight=weight)
 
 
-def backup_dir() -> Path:
-    base = Path(os.environ.get("USERPROFILE") or Path.home()) / "Documents"
-    folder = base / "EpsonResetBackups"
-    folder.mkdir(parents=True, exist_ok=True)
-    return folder
+# ---------------------------------------------------------------- widgets
+class Card(ctk.CTkFrame):
+    def __init__(self, master, **kw):
+        super().__init__(master, fg_color=CARD, corner_radius=16,
+                         border_width=1, border_color=BORDER, **kw)
 
 
-if not getattr(sys, "frozen", False):
-    vendor = app_dir() / "vendor" / "epson_print_conf"
-    if vendor.is_dir():
-        sys.path.insert(0, str(vendor))
+class Pill(ctk.CTkLabel):
+    def __init__(self, master, **kw):
+        super().__init__(master, text="—", font=font(12, "bold"), corner_radius=10,
+                         fg_color=SOFT, text_color=MUTED, height=26, width=96, **kw)
 
-import epson_print_conf as epc  # noqa: E402
+    def set(self, text, color=None):
+        if color is None:
+            self.configure(text=text, fg_color=SOFT, text_color=MUTED)
+        else:
+            self.configure(text=text, fg_color=color, text_color="#FFFFFF")
 
-epc.enable_usb_transport()
+
+class InkBar(ctk.CTkFrame):
+    def __init__(self, master, name):
+        super().__init__(master, fg_color="transparent")
+        self.color = color = INK_COLORS.get(name, BLUE)
+        self.value = ctk.CTkLabel(self, text="—", font=font(13, "bold"),
+                                  text_color=TEXT)
+        self.value.pack()
+        self.bar = ctk.CTkProgressBar(self, orientation="vertical", width=22,
+                                      height=86, corner_radius=8,
+                                      progress_color=color, fg_color=SOFT)
+        self.bar.set(0)
+        self.bar.configure(progress_color=SOFT)
+        self.bar.pack(pady=4)
+        ctk.CTkLabel(self, text=core.INK_TH.get(name, name), font=font(12),
+                     text_color=MUTED).pack()
+
+    def set(self, level):
+        if level is None:
+            self.value.configure(text="—")
+            self.bar.set(0)
+            self.bar.configure(progress_color=SOFT)
+        else:
+            self.value.configure(text=f"{level}%")
+            self.bar.configure(progress_color=self.color)
+            self.bar.set(max(0, min(100, level)) / 100)
 
 
-# ---------------------------------------------------------------- logging
-class ListHandler(logging.Handler):
-    """Keep library warnings/errors so the GUI can show them."""
+class Steps(ctk.CTkFrame):
+    LABELS = ("เชื่อมต่อ", "ตรวจสอบ", "รีเซ็ต", "ปิด-เปิดเครื่อง")
 
-    def __init__(self):
-        super().__init__(level=logging.WARNING)
-        self.lines = []
+    def __init__(self, master):
+        super().__init__(master, fg_color="transparent")
+        self.dots = []
+        for i, label in enumerate(self.LABELS):
+            col = ctk.CTkFrame(self, fg_color="transparent")
+            col.grid(row=0, column=i * 2)
+            dot = ctk.CTkLabel(col, text=str(i + 1), width=26, height=26,
+                               corner_radius=13, fg_color=SOFT, text_color=MUTED,
+                               font=font(12, "bold"))
+            dot.pack()
+            ctk.CTkLabel(col, text=label, font=font(11), text_color=MUTED).pack()
+            self.dots.append(dot)
+            if i < len(self.LABELS) - 1:
+                ctk.CTkFrame(self, height=2, width=46, fg_color=BORDER).grid(
+                    row=0, column=i * 2 + 1, padx=4, pady=(0, 18))
 
-    def emit(self, record):
+    def set(self, done_upto, current):
+        for i, dot in enumerate(self.dots):
+            if i < done_upto:
+                dot.configure(text="✓", fg_color=GREEN, text_color="#FFFFFF")
+            elif i == current:
+                dot.configure(text=str(i + 1), fg_color=BLUE, text_color="#FFFFFF")
+            else:
+                dot.configure(text=str(i + 1), fg_color=SOFT, text_color=MUTED)
+
+
+# ---------------------------------------------------------------- confirm dialog
+class ConfirmDialog(ctk.CTkToplevel):
+    def __init__(self, master, model):
+        super().__init__(master)
+        self.result = False
+        self.title("ยืนยันการรีเซ็ต")
+        self.configure(fg_color=BG)
+        self.resizable(False, False)
+        self.transient(master)
+
+        card = Card(self)
+        card.pack(padx=18, pady=18, fill="both", expand=True)
+
+        ctk.CTkLabel(card, text="!", width=56, height=56, corner_radius=28,
+                     fg_color=AMBER, text_color="#FFFFFF",
+                     font=font(28, "bold")).pack(pady=(22, 8))
+        ctk.CTkLabel(card, text=f"รีเซ็ตซับหมึก {model}?", font=font(20, "bold"),
+                     text_color=TEXT).pack()
+
+        points = (
+            ("💾", "โปรแกรมจะสำรองข้อมูลเครื่องพิมพ์ไว้ก่อนอัตโนมัติ"),
+            ("🔌", "ห้ามปิดเครื่องพิมพ์หรือถอดสาย USB ระหว่างรีเซ็ต"),
+            ("💧", "แผ่นซับหมึกจริงยังเต็ม ควรล้าง/เปลี่ยน หรือต่อถังหมึกทิ้ง"),
+            ("🛡", "การรีเซ็ตเองอาจทำให้เสียสิทธิ์ประกันจาก Epson"),
+        )
+        box = ctk.CTkFrame(card, fg_color=SOFT, corner_radius=12)
+        box.pack(padx=22, pady=16, fill="x")
+        for icon, text in points:
+            row = ctk.CTkFrame(box, fg_color="transparent")
+            row.pack(fill="x", padx=14, pady=5)
+            ctk.CTkLabel(row, text=icon, width=26, font=font(15)).pack(side="left")
+            ctk.CTkLabel(row, text=text, font=font(13), text_color=TEXT,
+                         anchor="w", justify="left", wraplength=360).pack(
+                side="left", fill="x", padx=(6, 0))
+
+        self.agree = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(card, text="ฉันเข้าใจและต้องการรีเซ็ต", variable=self.agree,
+                        font=font(13), text_color=TEXT, fg_color=RED,
+                        hover_color=RED_H, command=self._toggle).pack(
+            padx=22, anchor="w")
+
+        btns = ctk.CTkFrame(card, fg_color="transparent")
+        btns.pack(fill="x", padx=22, pady=(16, 22))
+        ctk.CTkButton(btns, text="ยกเลิก", height=44, corner_radius=12,
+                      font=font(14), fg_color=SOFT, hover_color=BORDER,
+                      text_color=TEXT, command=self.destroy).pack(
+            side="left", expand=True, fill="x", padx=(0, 6))
+        self.ok_btn = ctk.CTkButton(btns, text="รีเซ็ตเลย", height=44,
+                                    corner_radius=12, font=font(14, "bold"),
+                                    fg_color=RED, hover_color=RED_H,
+                                    state="disabled", command=self._ok)
+        self.ok_btn.pack(side="left", expand=True, fill="x", padx=(6, 0))
+
+        self.update_idletasks()
+        x = master.winfo_rootx() + (master.winfo_width() - self.winfo_width()) // 2
+        y = master.winfo_rooty() + 60
+        self.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        self.after(50, self._grab)
+
+    def _grab(self):
         try:
-            self.lines.append(self.format(record))
+            self.grab_set()
+            self.focus_force()
         except Exception:
             pass
 
+    def _toggle(self):
+        self.ok_btn.configure(state="normal" if self.agree.get() else "disabled")
 
-LOG = ListHandler()
-LOG.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
-logging.getLogger().addHandler(LOG)
-logging.getLogger().setLevel(logging.WARNING)
-
-
-# ---------------------------------------------------------------- printer access
-def load_config() -> dict:
-    path = app_dir() / "printers.pickle"
-    if not path.is_file():
-        return {}
-    with open(path, "rb") as fp:
-        return pickle.load(fp)
+    def _ok(self):
+        self.result = True
+        self.destroy()
 
 
-CONF = load_config()
-MOCK = os.environ.get("EPSON_RESET_MOCK") == "1"
-_mock_cfg = None
-
-
-def mock_config():
-    """Fake L4260 with a full waste counter (EPSON_RESET_MOCK=1)."""
-    global _mock_cfg
-    if _mock_cfg is None:
-        from epson_usb.backends.mock import MockConfig
-
-        _mock_cfg = MockConfig(
-            device_id=(
-                b"MFG:EPSON;CMD:ESCPL2,BDC,D4;MDL:L4260 Series;"
-                b"CLS:PRINTER;DES:EPSON L4260 Series;"
-            ),
-            eeprom={i: 0 for i in range(256)} | {54: 104, 55: 94, 255: 104,
-                                                  28: 7, 47: 0x80, 48: 0x3B},
-        )
-    return _mock_cfg
-
-
-def make_printer(model=None):
-    kwargs = {}
-    if MOCK:
-        kwargs["backend"] = "mock"
-        kwargs["usb_options"] = {"config": mock_config()}
-    elif os.environ.get("EPSON_RESET_BACKEND"):
-        kwargs["backend"] = os.environ["EPSON_RESET_BACKEND"]
-    return epc.EpsonPrinter(conf_dict=copy.deepcopy(CONF), model=model, **kwargs)
-
-
-def close_printer(printer):
-    try:
-        printer.close()
-    except Exception:
-        pass
-
-
-def normalize_model(raw: str) -> str:
-    name = (raw or "").strip()
-    name = re.sub(r"^(EPSON|Epson)\s+", "", name)
-    name = re.sub(r"\s+Series$", "", name, flags=re.IGNORECASE)
-    return name.strip()
-
-
-def first(value):
-    if isinstance(value, (list, tuple)):
-        return value[0] if value else ""
-    return value or ""
-
-
-def detect_model():
-    """Return (model_name, supported, device_id_dict)."""
-    printer = make_printer()
-    try:
-        ident = printer.get_device_identification()
-    finally:
-        close_printer(printer)
-    if not ident:
-        raise ConnectionError("no-identification")
-    raw = first(ident.get("Model")) or first(ident.get("MDL")) \
-        or first(ident.get("Description"))
-    model = normalize_model(raw)
-    supported = model in make_printer().valid_printers
-    return model, supported, ident
-
-
-INK_TH = {"Black": "ดำ", "Cyan": "ฟ้า", "Magenta": "ชมพู", "Yellow": "เหลือง",
-          "Photo Black": "ดำ (ภาพถ่าย)", "Gray": "เทา", "Light Cyan": "ฟ้าอ่อน",
-          "Light Magenta": "ชมพูอ่อน"}
-
-
-def is_waste_full(status: dict) -> bool:
-    err = str(status.get("errcode", ""))
-    if "waste" in err.lower() or "overflow" in err.lower():
-        return True
-    for key in ("maintenance_box_1", "maintenance_box_2"):
-        val = str(status.get(key, "")).lower()
-        if val.startswith("full") or val.startswith("near"):
-            return True
-    return False
-
-
-def check_printer():
-    """Read-only: identify the printer and read its status."""
-    model, supported, ident = detect_model()
-    result = {"model": model, "supported": supported, "ident": ident}
-    printer = make_printer(model if supported else None)
-    try:
-        result["status"] = printer.get_printer_status() or {}
-        if supported:
-            try:
-                result["stats"] = printer.get_stats() or {}
-            except Exception:
-                result["stats"] = {}
-    finally:
-        close_printer(printer)
-    return result
-
-
-def backup_eeprom(printer, model: str, serial: str) -> Path:
-    data = printer.dump_eeprom(0, 255)
-    values = [v for v in data.values() if v is not None]
-    if len(values) < len(data) // 2:
-        raise IOError("backup-failed")
-    for addr in printer.parm.get("raw_waste_reset", {}):
-        if addr <= 255 and data.get(addr) is None:
-            raise IOError("backup-failed")
-    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    safe_serial = re.sub(r"[^A-Za-z0-9]", "", serial or "") or "unknown"
-    path = backup_dir() / f"{model}_{safe_serial}_{stamp}.txt"
-    with open(path, "w", encoding="utf-8") as fp:
-        fp.write(f"# {APP_TITLE} {APP_VERSION} EEPROM backup\n")
-        fp.write(f"# model={model} serial={serial} time={stamp}\n")
-        for addr, val in data.items():
-            disp = "  --" if val is None else f"{val:#04x}"
-            fp.write(f"EEPROM_ADDR 0x{addr:02X} = {addr:3d}: {disp}\n")
-    return path
-
-
-def reset_printer(model: str, serial: str):
-    """Back up the EEPROM, then reset the waste ink counters."""
-    printer = make_printer(model)
-    try:
-        if not printer.parm:
-            raise ValueError("unsupported")
-        path = backup_eeprom(printer, model, serial)
-        report = []
-        ok = printer.reset_waste_ink_levels(report=report)
-        return bool(ok), path
-    finally:
-        close_printer(printer)
-
-
-# ---------------------------------------------------------------- GUI
-FONT = "Leelawadee UI"
-GREEN, RED, AMBER, GREY = "#1e8e3e", "#c5221f", "#b06000", "#5f6368"
-
-
-class App(tk.Tk):
+# ---------------------------------------------------------------- main window
+class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title(f"{APP_TITLE}{' (โหมดทดสอบ)' if MOCK else ''}")
-        self.geometry("560x560")
-        self.minsize(480, 480)
-        self.configure(bg="white")
+        ctk.set_appearance_mode("system")
+        self.title(core.APP_TITLE + (" · โหมดทดสอบ" if core.MOCK else ""))
+        self.geometry("640x820")
+        self.minsize(600, 760)
+        self.configure(fg_color=BG)
+
         self.jobs = queue.Queue()
         self.model = None
         self.serial = ""
         self.supported = False
+        self.ui_state = "idle"
+        self.log_visible = False
+        self.last_backup = None
+
         self._build()
+        self._set_state("idle")
         self.after(100, self._poll)
-        if not CONF:
-            self._set_headline("ไม่พบไฟล์ข้อมูลรุ่นเครื่องพิมพ์ (printers.pickle)", RED)
+        if not core.CONF:
+            self._set_state("error")
+            self.hero_sub.configure(text="ไม่พบไฟล์ข้อมูลรุ่นเครื่องพิมพ์ (printers.pickle)")
 
     # -- layout
     def _build(self):
-        style = ttk.Style(self)
-        style.configure("Big.TButton", font=(FONT, 13), padding=10)
+        wrap = ctk.CTkFrame(self, fg_color="transparent")
+        wrap.pack(fill="both", expand=True, padx=22, pady=18)
 
-        tk.Label(self, text="รีเซ็ตซับหมึกเครื่องพิมพ์ Epson", font=(FONT, 18, "bold"),
-                 bg="white").pack(pady=(18, 2))
-        tk.Label(self, text="เสียบสาย USB และเปิดเครื่องพิมพ์ก่อนกดปุ่ม",
-                 font=(FONT, 11), fg=GREY, bg="white").pack()
+        # header
+        head = ctk.CTkFrame(wrap, fg_color="transparent")
+        head.pack(fill="x")
+        ctk.CTkLabel(head, text="🖨", font=font(30)).pack(side="left", padx=(0, 10))
+        titles = ctk.CTkFrame(head, fg_color="transparent")
+        titles.pack(side="left")
+        ctk.CTkLabel(titles, text="รีเซ็ตซับหมึก Epson", font=font(22, "bold"),
+                     text_color=TEXT).pack(anchor="w")
+        ctk.CTkLabel(titles, text="เช็กสถานะและรีเซ็ตตัวนับซับหมึกผ่านสาย USB",
+                     font=font(13), text_color=MUTED).pack(anchor="w")
+        badge = "โหมดทดสอบ" if core.MOCK else "USB"
+        ctk.CTkLabel(head, text=badge, font=font(12, "bold"), corner_radius=10,
+                     fg_color=AMBER if core.MOCK else BLUE, text_color="#FFFFFF",
+                     height=26, width=80).pack(side="right")
 
-        self.headline = tk.Label(self, text="กด \"ตรวจสอบเครื่องพิมพ์\" เพื่อเริ่ม",
-                                 font=(FONT, 14, "bold"), fg=GREY, bg="white",
-                                 wraplength=500, justify="center")
-        self.headline.pack(pady=(18, 6))
+        self.steps = Steps(wrap)
+        self.steps.pack(pady=(18, 10))
 
-        self.details = tk.Label(self, text="", font=(FONT, 11), bg="white",
-                                justify="left", anchor="w", wraplength=500)
-        self.details.pack(fill="x", padx=30)
+        # hero
+        hero = Card(wrap)
+        hero.pack(fill="x", pady=(4, 10))
+        inner = ctk.CTkFrame(hero, fg_color="transparent")
+        inner.pack(fill="x", padx=20, pady=18)
+        self.hero_icon = ctk.CTkLabel(inner, text="?", width=64, height=64,
+                                      corner_radius=32, fg_color=GREY,
+                                      text_color="#FFFFFF", font=font(30, "bold"))
+        self.hero_icon.pack(side="left", padx=(0, 16))
+        texts = ctk.CTkFrame(inner, fg_color="transparent")
+        texts.pack(side="left", fill="x", expand=True)
+        self.hero_title = ctk.CTkLabel(texts, text="", font=font(20, "bold"),
+                                       text_color=TEXT, anchor="w")
+        self.hero_title.pack(fill="x")
+        self.hero_sub = ctk.CTkLabel(texts, text="", font=font(13),
+                                     text_color=MUTED, anchor="w", justify="left",
+                                     wraplength=440)
+        self.hero_sub.pack(fill="x")
+        self.progress = ctk.CTkProgressBar(texts, mode="indeterminate", height=6,
+                                           progress_color=BLUE, fg_color=SOFT)
 
-        buttons = tk.Frame(self, bg="white")
-        buttons.pack(pady=16)
-        self.btn_check = ttk.Button(buttons, text="ตรวจสอบเครื่องพิมพ์",
-                                    style="Big.TButton", command=self.on_check)
-        self.btn_check.grid(row=0, column=0, padx=8)
-        self.btn_reset = ttk.Button(buttons, text="รีเซ็ตซับหมึก",
-                                    style="Big.TButton", command=self.on_reset,
-                                    state="disabled")
-        self.btn_reset.grid(row=0, column=1, padx=8)
+        # info row: printer + waste pads
+        row = ctk.CTkFrame(wrap, fg_color="transparent")
+        row.pack(fill="x", pady=(0, 10))
+        row.grid_columnconfigure((0, 1), weight=1, uniform="c")
 
-        self.progress = ttk.Progressbar(self, mode="indeterminate", length=300)
+        info = Card(row)
+        info.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        ctk.CTkLabel(info, text="เครื่องพิมพ์", font=font(13, "bold"),
+                     text_color=MUTED).pack(anchor="w", padx=16, pady=(14, 4))
+        self.info_rows = {}
+        for key, label in (("model", "รุ่น"), ("status", "สถานะ"),
+                           ("serial", "ซีเรียล")):
+            r = ctk.CTkFrame(info, fg_color="transparent")
+            r.pack(fill="x", padx=16, pady=2)
+            ctk.CTkLabel(r, text=label, font=font(13), text_color=MUTED,
+                         width=60, anchor="w").pack(side="left")
+            v = ctk.CTkLabel(r, text="—", font=font(13, "bold"), text_color=TEXT,
+                             anchor="w")
+            v.pack(side="left", fill="x", expand=True)
+            self.info_rows[key] = v
+        ctk.CTkFrame(info, fg_color="transparent", height=10).pack()
 
-        self.log = tk.Text(self, height=6, font=("Consolas", 9), fg=GREY,
-                           relief="flat", bg="#f6f6f6", wrap="word")
-        self.log.pack(fill="both", expand=True, padx=16, pady=(8, 4))
-        self.log.configure(state="disabled")
+        pads = Card(row)
+        pads.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
+        ctk.CTkLabel(pads, text="แผ่นซับหมึก", font=font(13, "bold"),
+                     text_color=MUTED).pack(anchor="w", padx=16, pady=(14, 4))
+        self.pad_pills = []
+        for i in (1, 2):
+            r = ctk.CTkFrame(pads, fg_color="transparent")
+            r.pack(fill="x", padx=16, pady=4)
+            ctk.CTkLabel(r, text=f"ซับหมึก {i}", font=font(13),
+                         text_color=TEXT).pack(side="left")
+            pill = Pill(r)
+            pill.pack(side="right")
+            self.pad_pills.append(pill)
 
-        tk.Label(self, text=f"v{APP_VERSION} · ใช้ epson_print_conf (EUPL-1.2) · "
-                            f"ไฟล์สำรอง: Documents\\EpsonResetBackups",
-                 font=(FONT, 8), fg=GREY, bg="white").pack(pady=(0, 6))
+        # inks
+        inks = Card(wrap)
+        inks.pack(fill="x", pady=(0, 12))
+        ctk.CTkLabel(inks, text="ระดับหมึก", font=font(13, "bold"),
+                     text_color=MUTED).pack(anchor="w", padx=16, pady=(14, 0))
+        bars = ctk.CTkFrame(inks, fg_color="transparent")
+        bars.pack(pady=(4, 14))
+        self.ink_bars = {}
+        for name in ("Black", "Cyan", "Magenta", "Yellow"):
+            bar = InkBar(bars, name)
+            bar.pack(side="left", padx=26)
+            self.ink_bars[name] = bar
 
-    def _set_headline(self, text, color):
-        self.headline.configure(text=text, fg=color)
+        # actions
+        actions = ctk.CTkFrame(wrap, fg_color="transparent")
+        actions.pack(fill="x")
+        self.btn_primary = ctk.CTkButton(actions, text="", height=52,
+                                         corner_radius=14, font=font(16, "bold"),
+                                         command=self._primary)
+        self.btn_primary.pack(fill="x")
+        self.btn_secondary = ctk.CTkButton(actions, text="", height=40,
+                                           corner_radius=12, font=font(14),
+                                           fg_color="transparent", border_width=1,
+                                           border_color=BORDER, text_color=TEXT,
+                                           hover_color=SOFT,
+                                           command=self._secondary)
 
-    def _write_log(self, text):
-        self.log.configure(state="normal")
-        self.log.insert("end", text.rstrip() + "\n")
-        self.log.see("end")
-        self.log.configure(state="disabled")
+        # footer
+        foot = ctk.CTkFrame(wrap, fg_color="transparent")
+        foot.pack(fill="x", side="bottom")
+        self.log_box = ctk.CTkTextbox(wrap, height=110, font=("Consolas", 11),
+                                      fg_color=CARD, text_color=MUTED,
+                                      border_width=1, border_color=BORDER,
+                                      corner_radius=12, wrap="word")
+        self.log_box.configure(state="disabled")
+        link = dict(fg_color="transparent", hover_color=SOFT, text_color=BLUE,
+                    font=font(12), height=28, width=10)
+        ctk.CTkButton(foot, text="📁 เปิดโฟลเดอร์ไฟล์สำรอง",
+                      command=self._open_backups, **link).pack(side="left")
+        self.btn_log = ctk.CTkButton(foot, text="รายละเอียดทางเทคนิค ▾",
+                                     command=self._toggle_log, **link)
+        self.btn_log.pack(side="left", padx=4)
+        ctk.CTkLabel(foot, text=f"v{core.APP_VERSION} · epson_print_conf (EUPL-1.2)",
+                     font=font(11), text_color=MUTED).pack(side="right")
 
-    def _busy(self, busy: bool, text=""):
-        state = "disabled" if busy else "normal"
-        self.btn_check.configure(state=state)
-        self.btn_reset.configure(
-            state="normal" if (not busy and self.supported) else "disabled")
+    # -- state
+    def _set_state(self, state, sub=None):
+        self.ui_state = state
+        icon, color, title, text = HERO[state]
+        self.hero_icon.configure(text=icon, fg_color=color)
+        self.hero_title.configure(text=title)
+        self.hero_sub.configure(text=sub if sub is not None else text)
+
+        busy = state == "busy"
         if busy:
-            self._set_headline(text, GREY)
-            self.progress.pack(before=self.log, pady=4)
-            self.progress.start(12)
+            self.progress.pack(fill="x", pady=(10, 0))
+            self.progress.start()
         else:
             self.progress.stop()
             self.progress.pack_forget()
 
+        steps = {"idle": (0, 0), "busy": (None, None), "error": (0, 0),
+                 "ok": (2, 2), "full": (2, 2), "unsupported": (1, 1),
+                 "done": (3, 3), "failed": (2, 2), "backup_failed": (2, 2)}
+        done, cur = steps[state]
+        if done is not None:
+            self.steps.set(done, cur)
+
+        primary = {
+            "idle": ("ตรวจสอบเครื่องพิมพ์", BLUE, BLUE_H),
+            "busy": ("กรุณารอสักครู่...", BLUE, BLUE_H),
+            "error": ("ลองอีกครั้ง", BLUE, BLUE_H),
+            "ok": ("ตรวจสอบอีกครั้ง", BLUE, BLUE_H),
+            "full": ("รีเซ็ตซับหมึก", RED, RED_H),
+            "unsupported": ("ตรวจสอบอีกครั้ง", BLUE, BLUE_H),
+            "done": ("ตรวจสอบอีกครั้ง", BLUE, BLUE_H),
+            "failed": ("ตรวจสอบอีกครั้ง", BLUE, BLUE_H),
+            "backup_failed": ("ตรวจสอบอีกครั้ง", BLUE, BLUE_H),
+        }[state]
+        self.btn_primary.configure(text=primary[0], fg_color=primary[1],
+                                   hover_color=primary[2],
+                                   state="disabled" if busy else "normal")
+
+        secondary = {"full": "ตรวจสอบอีกครั้ง", "ok": "รีเซ็ตซับหมึกอยู่ดี"}.get(state)
+        if secondary:
+            self.btn_secondary.configure(text=secondary, state="normal")
+            self.btn_secondary.pack(fill="x", pady=(8, 0))
+        else:
+            self.btn_secondary.pack_forget()
+
+    def _primary(self):
+        if self.ui_state == "full":
+            self.on_reset()
+        else:
+            self.on_check()
+
+    def _secondary(self):
+        if self.ui_state == "full":
+            self.on_check()
+        else:
+            self.on_reset()
+
+    # -- footer helpers
+    def _toggle_log(self):
+        self.log_visible = not self.log_visible
+        w, h = self.winfo_width(), self.winfo_height()
+        if self.log_visible:
+            self.log_box.pack(fill="x", pady=(8, 0))
+            self.btn_log.configure(text="ซ่อนรายละเอียด ▴")
+            self.geometry(f"{w}x{h + 130}")
+        else:
+            self.log_box.pack_forget()
+            self.geometry(f"{w}x{max(h - 130, 760)}")
+            self.btn_log.configure(text="รายละเอียดทางเทคนิค ▾")
+
+    def _open_backups(self):
+        try:
+            os.startfile(str(core.backup_dir()))
+        except Exception as exc:
+            self._log(f"เปิดโฟลเดอร์ไม่ได้: {exc}")
+
+    def _log(self, text):
+        self.log_box.configure(state="normal")
+        self.log_box.insert("end", text.rstrip() + "\n")
+        self.log_box.see("end")
+        self.log_box.configure(state="disabled")
+
     # -- background jobs
     def _run(self, func, done, *args):
-        LOG.lines.clear()
+        core.LOG.lines.clear()
 
         def worker():
             try:
-                result = func(*args)
-                self.jobs.put((done, result, None))
+                self.jobs.put((done, func(*args), None))
             except Exception as exc:
                 self.jobs.put((done, None, exc))
 
@@ -317,11 +461,10 @@ class App(tk.Tk):
         try:
             while True:
                 done, result, exc = self.jobs.get_nowait()
-                self._busy(False)
-                for line in LOG.lines:
-                    self._write_log(line)
+                for line in core.LOG.lines:
+                    self._log(line)
                 if exc is not None:
-                    self._write_log("".join(traceback.format_exception_only(exc)))
+                    self._log("".join(traceback.format_exception_only(exc)))
                 done(result, exc)
         except queue.Empty:
             pass
@@ -329,110 +472,104 @@ class App(tk.Tk):
 
     # -- check
     def on_check(self):
-        self._busy(True, "กำลังอ่านข้อมูลจากเครื่องพิมพ์...")
-        self._run(check_printer, self.after_check)
+        self._set_state("busy", "กำลังอ่านข้อมูลจากเครื่องพิมพ์...")
+        self.steps.set(1, 1)
+        self._run(core.check_printer, self.after_check)
+
+    def _clear_info(self):
+        for v in self.info_rows.values():
+            v.configure(text="—")
+        for p in self.pad_pills:
+            p.set("—")
+        for bar in self.ink_bars.values():
+            bar.set(None)
 
     def after_check(self, result, exc):
         if exc is not None:
             self.supported = False
-            self.btn_reset.configure(state="disabled")
-            self.details.configure(text="")
-            self._set_headline(
-                "ติดต่อเครื่องพิมพ์ไม่ได้\nเช็กว่าเสียบสาย USB เปิดเครื่อง "
-                "และปิดโปรแกรมอื่นที่ใช้เครื่องพิมพ์อยู่ แล้วลองใหม่", RED)
+            self._clear_info()
+            self._set_state("error")
             return
 
         self.model = result["model"]
         self.supported = result["supported"]
-        status = result.get("status", {})
+        status = result.get("status") or {}
         self.serial = str(status.get("serial_number_info", "") or "")
+        self._log(f"รุ่น {self.model} | {status}")
 
-        lines = [f"รุ่น: {self.model or 'ไม่ทราบ'}"]
-        state = status.get("status")
-        if isinstance(state, (list, tuple)) and len(state) > 1:
-            lines.append(f"สถานะ: {state[1]}")
-        if status.get("errcode"):
-            lines.append(f"ข้อผิดพลาด: {status['errcode']}")
-        for key, label in (("maintenance_box_1", "ซับหมึก 1"),
-                           ("maintenance_box_2", "ซับหมึก 2")):
-            if key in status:
-                val = str(status[key])
-                th = "เต็ม" if val.startswith("full") else \
-                    "ใกล้เต็ม" if val.startswith("near") else \
-                    "ยังไม่เต็ม" if val.startswith("not full") else val
-                lines.append(f"{label}: {th}")
-        inks = status.get("ink_level") or []
-        if inks:
-            parts = []
-            for ink in inks:
-                try:
-                    parts.append(f"{INK_TH.get(ink[2], ink[2])} {ink[4]}%")
-                except Exception:
-                    pass
-            if parts:
-                lines.append("หมึก: " + ", ".join(parts))
-        self.details.configure(text="\n".join(lines))
-        self._write_log(f"รุ่น {self.model} | {status}")
+        self.info_rows["model"].configure(text=self.model or "ไม่ทราบ")
+        st = status.get("status")
+        st_text = st[1] if isinstance(st, (list, tuple)) and len(st) > 1 else "—"
+        st_th = {"Idle (ready to print)": "พร้อมพิมพ์", "Error": "มีข้อผิดพลาด",
+                 "Printing": "กำลังพิมพ์", "Busy": "ไม่ว่าง"}.get(st_text, st_text)
+        self.info_rows["status"].configure(text=st_th)
+        self.info_rows["serial"].configure(text=self.serial or "—")
 
-        full = is_waste_full(status)
+        for pill, key in zip(self.pad_pills, ("maintenance_box_1", "maintenance_box_2")):
+            val = str(status.get(key, ""))
+            if val.startswith("full"):
+                pill.set("เต็ม", RED)
+            elif val.startswith("near"):
+                pill.set("ใกล้เต็ม", AMBER)
+            elif val.startswith("not full"):
+                pill.set("ปกติ", GREEN)
+            else:
+                pill.set("—")
+
+        for bar in self.ink_bars.values():
+            bar.set(None)
+        for ink in status.get("ink_level") or []:
+            try:
+                if ink[2] in self.ink_bars:
+                    self.ink_bars[ink[2]].set(int(ink[4]))
+            except Exception:
+                pass
+
         if not self.supported:
-            self._set_headline(
-                f"ยังไม่รองรับรุ่น {self.model or 'นี้'}\nโปรแกรมนี้รีเซ็ตรุ่นนี้ไม่ได้", AMBER)
-            self.btn_reset.configure(state="disabled")
-        elif full:
-            self._set_headline("ซับหมึกเต็ม · กด \"รีเซ็ตซับหมึก\" ได้เลย", RED)
-            self.btn_reset.configure(state="normal")
+            self._set_state("unsupported",
+                            f"อ่านข้อมูล {self.model or 'เครื่องนี้'} ได้ "
+                            "แต่ยังไม่มีข้อมูลสำหรับรีเซ็ตรุ่นนี้")
+        elif core.is_waste_full(status):
+            err = status.get("errcode")
+            self._set_state("full", None if not err else
+                            "เครื่องพิมพ์แจ้งว่าตัวนับซับหมึกเต็ม "
+                            "กด \"รีเซ็ตซับหมึก\" เพื่อแก้")
         else:
-            self._set_headline("เครื่องพิมพ์ปกติ ซับหมึกยังไม่เต็ม", GREEN)
-            self.btn_reset.configure(state="normal")
+            self._set_state("ok")
 
     # -- reset
     def on_reset(self):
         if not self.supported:
             return
-        ok = messagebox.askyesno(
-            "ยืนยันการรีเซ็ต",
-            f"จะรีเซ็ตตัวนับซับหมึกของ {self.model}\n\n"
-            "• โปรแกรมจะสำรองข้อมูลเครื่องพิมพ์ไว้ก่อนอัตโนมัติ\n"
-            "• ห้ามปิดเครื่องพิมพ์หรือถอดสายระหว่างรีเซ็ต\n"
-            "• แผ่นซับหมึกจริงยังเต็มอยู่ ควรล้าง/เปลี่ยน หรือต่อถังหมึกทิ้ง\n"
-            "• ทำแล้วอาจเสียสิทธิ์ประกันจาก Epson\n\n"
-            "ต้องการรีเซ็ตเลยไหม?",
-            icon="warning")
-        if not ok:
+        dialog = ConfirmDialog(self, self.model)
+        self.wait_window(dialog)
+        if not dialog.result:
             return
-        self._busy(True, "กำลังสำรองข้อมูลและรีเซ็ต... ห้ามปิดเครื่องพิมพ์")
-        self._run(reset_printer, self.after_reset, self.model, self.serial)
+        self._set_state("busy", "กำลังสำรองข้อมูลและรีเซ็ต... ห้ามปิดเครื่องพิมพ์")
+        self.steps.set(2, 2)
+        self._run(core.reset_printer, self.after_reset, self.model, self.serial)
 
     def after_reset(self, result, exc):
         if exc is not None:
             if isinstance(exc, IOError) and "backup-failed" in str(exc):
-                msg = "สำรองข้อมูลไม่สำเร็จ จึงยังไม่ได้รีเซ็ต\nลองกดตรวจสอบแล้วรีเซ็ตใหม่"
+                self._set_state("backup_failed")
             else:
-                msg = "รีเซ็ตไม่สำเร็จ ลองปิด-เปิดเครื่องพิมพ์แล้วทำใหม่"
-            self._set_headline(msg, RED)
+                self._set_state("failed")
             return
         ok, path = result
-        self._write_log(f"สำรองไว้ที่: {path}")
+        self.last_backup = path
+        self._log(f"สำรองไว้ที่: {path}")
         if ok:
-            self._set_headline(
-                "รีเซ็ตสำเร็จ\nปิดเครื่องพิมพ์ แล้วเปิดใหม่ จากนั้นกด \"ตรวจสอบเครื่องพิมพ์\"",
-                GREEN)
-            messagebox.showinfo(
-                "รีเซ็ตสำเร็จ",
-                "รีเซ็ตตัวนับซับหมึกเรียบร้อย\n\n"
-                "1. กดปุ่ม Power ปิดเครื่องพิมพ์ รอไฟดับ\n"
-                "2. เปิดเครื่องใหม่\n"
-                "3. กด \"ตรวจสอบเครื่องพิมพ์\" อีกครั้ง\n\n"
-                f"ไฟล์สำรอง: {path}")
+            for p in self.pad_pills:
+                p.set("—")
+            self.info_rows["status"].configure(text="รอปิด-เปิดเครื่อง")
+            self._set_state("done")
         else:
-            self._set_headline(
-                "เครื่องพิมพ์ไม่รับคำสั่งรีเซ็ต\nรุ่นหรือเฟิร์มแวร์นี้อาจไม่รองรับ", RED)
+            self._set_state("failed")
 
 
 def main():
-    app = App()
-    app.mainloop()
+    App().mainloop()
 
 
 if __name__ == "__main__":

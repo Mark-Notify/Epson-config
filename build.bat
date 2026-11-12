@@ -22,7 +22,7 @@ if not exist venv (
     py -m venv venv || goto :error
 )
 echo [3/5] Installing packages...
-venv\Scripts\python -m pip install --quiet -r vendor\epson_print_conf\requirements.txt pyinstaller || goto :error
+venv\Scripts\python -m pip install --quiet -r vendor\epson_print_conf\requirements.txt pyinstaller customtkinter==5.2.2 || goto :error
 
 echo [4/5] Building printer database...
 curl.exe -sSL -o vendor\epson.toml %TOML_URL% || goto :error
@@ -36,6 +36,7 @@ venv\Scripts\python -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --hidden-import epson_usb_bridge ^
     --collect-submodules epson_usb ^
     --collect-all pysnmp ^
+    --collect-data customtkinter ^
     --exclude-module black --exclude-module blib2to3 ^
     epson_reset_gui.py || goto :error
 
